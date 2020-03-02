@@ -2,6 +2,20 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 
+
+def get_param_num():
+
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+        shape = variable.get_shape()
+        variable_parameters = 1
+        for dim in shape:
+            variable_parameters *= dim.value
+        total_parameters += variable_parameters
+    print('The total number of parameters are: ', total_parameters)
+    return total_parameters
+
+
 def train_model(loss, global_step, data_num, args):
     lr_factor = 0.1
     lr_epoch = args.lr_epoch.strip().split(',')

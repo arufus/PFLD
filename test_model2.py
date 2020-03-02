@@ -1,3 +1,9 @@
+# -*- encoding: utf-8 -*-
+"""
+@File            @Modify Time          @Version 
+test_model2.py.py       2020/3/2 22:38       1.0
+"""
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -9,19 +15,18 @@ import tensorflow as tf
 import numpy as np
 import cv2
 
-from generate_data import gen_data
 
 def main():
     meta_file = './models2/model0/model.meta'
     ckpt_file = './models2/model0/model.ckpt-0'
-    # test_list = './data/300w_image_list.txt'
 
     image_size = 112
 
-    image_files = r'F:\Data\WFLW\PFLD_out\test_data\list.txt'
-    out_dir = 'result'
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+    input_folder = r"F:\Data\WFLW\test"
+    output_folder = r"F:\Data\WFLW\test_res"
+
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
 
     with tf.Graph().as_default():
         with tf.Session() as sess:
@@ -33,20 +38,14 @@ def main():
             images_placeholder = graph.get_tensor_by_name('image_batch:0')
             phase_train_placeholder = graph.get_tensor_by_name('phase_train:0')
 
-            # landmark_L1 = graph.get_tensor_by_name('landmark_L1:0')
-            # landmark_L2 = graph.get_tensor_by_name('landmark_L2:0')
-            # landmark_L3 = graph.get_tensor_by_name('landmark_L3:0')
-            # landmark_L4 = graph.get_tensor_by_name('landmark_L4:0')
-            # landmark_L5 = graph.get_tensor_by_name('landmark_L5:0')
-            # landmark_total = [landmark_L1, landmark_L2, landmark_L3, landmark_L4, landmark_L5]
             landmarks = graph.get_tensor_by_name('pfld_inference/fc/BiasAdd:0')
 
-            file_list, train_landmarks, train_attributes, train_euler_angles = gen_data(image_files)
+            file_list = os.listdir(input_folder)
             print(file_list)
             for file in file_list:
                 filename = os.path.split(file)[-1]
-                image = cv2.imread(file)
-                # image = cv2.resize(image, (image_size, image_size))
+                image = cv2.imread(os.path.join(input_folder, file))
+
                 input = cv2.cvtColor(image.copy(), cv2.COLOR_BGR2RGB)
                 input = cv2.resize(input, (image_size, image_size))
                 input = input.astype(np.float32)/256.0
@@ -68,7 +67,7 @@ def main():
                     cv2.circle(image, (x, y), 1, (0, 0, 255))
                 cv2.imshow('0', image)
                 cv2.waitKey(0)
-                cv2.imwrite(os.path.join(out_dir, filename), image)
+                cv2.imwrite(os.path.join(output_folder, filename), image)
 
 
 if __name__ == '__main__':

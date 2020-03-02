@@ -19,7 +19,7 @@ import time
 
 from generate_data import DateSet
 from model2 import create_model
-from utils import train_model
+from utils import train_model, get_param_num
 
 log_dir = './tensorboard'
 
@@ -66,7 +66,7 @@ def main(args):
         epoch_size = num_train_file//args.batch_size
         print('Number of batches per epoch: {}'.format(epoch_size))
 
-        image_batch = tf.placeholder(tf.float32, shape=(None, args.image_size, args.image_size, 3),\
+        image_batch = tf.placeholder(tf.float32, shape=(None, args.image_size, args.image_size, 3),
                                      name='image_batch')
         landmark_batch = tf.placeholder(tf.float32, shape=(None, 196), name='landmark_batch')
         attribute_batch = tf.placeholder(tf.int32,  shape=(None, 6), name='attribute_batch')
@@ -83,8 +83,9 @@ def main(args):
         print('Building training graph.')
         # total_loss, landmarks, heatmaps_loss, heatmaps= create_model(image_batch, landmark_batch,\
         #                                                                                phase_train_placeholder, args)
-        landmarks_pre, landmarks_loss, euler_angles_pre = create_model(image_batch, landmark_batch,\
+        landmarks_pre, landmarks_loss, euler_angles_pre = create_model(image_batch, landmark_batch,
                                                                               phase_train_placeholder, args)
+        get_param_num()
 
         attributes_w_n = tf.to_float(attribute_batch[:, 1:6])
         # _num = attributes_w_n.shape[0]
