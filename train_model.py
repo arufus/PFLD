@@ -290,7 +290,7 @@ def heatmap2landmark(heatmap):
     landmark = []
     h,w,c = heatmap.shape
     for i in range(c):
-        m,n=divmod(np.argmax(heatmap[i]),w)
+        m, n=divmod(np.argmax(heatmap[i]),w)
         landmark.append(n/w)
         landmark.append(m/h)
     return landmark
@@ -320,20 +320,20 @@ def save_image_example(sess, list_ops, args):
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--file_list', type=str,default='data/train_data/list.txt')
-    parser.add_argument('--test_list', type=str, default='data/test_data/list.txt')
-    parser.add_argument('--seed',type=int, default=666)
-    parser.add_argument('--max_epoch', type=int, default=1000)
+    parser.add_argument('--file_list', type=str,default=r'F:\Data\WFLW\PFLD_out\train_data\list.txt')
+    parser.add_argument('--test_list', type=str, default=r'F:\Data\WFLW\PFLD_out\test_data\list.txt')
+    parser.add_argument('--seed', type=int, default=666)
+    parser.add_argument('--max_epoch', type=int, default=10)
     parser.add_argument('--image_size', type=int, default=112)
     parser.add_argument('--image_channels', type=int, default=3)
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--pretrained_model', type=str, default=None)
     parser.add_argument('--model_dir', type=str, default='models1/model_test')
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--lr_epoch', type=str, default='10,20,30,40,200,500')
     parser.add_argument('--weight_decay', type=float, default=5e-5)
     parser.add_argument('--level', type=str, default='L5')
-    parser.add_argument('--save_image_example',action='store_false')
+    parser.add_argument('--save_image_example',action='store_false', default=False)
     parser.add_argument('--debug', type=str, default='False')
     return parser.parse_args(argv)
 

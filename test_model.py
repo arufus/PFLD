@@ -33,12 +33,13 @@ def main():
             images_placeholder = graph.get_tensor_by_name('image_batch:0')
             phase_train_placeholder = graph.get_tensor_by_name('phase_train:0')
 
-            landmark_L1 = graph.get_tensor_by_name('landmark_L1:0')
-            landmark_L2 = graph.get_tensor_by_name('landmark_L2:0')
-            landmark_L3 = graph.get_tensor_by_name('landmark_L3:0')
-            landmark_L4 = graph.get_tensor_by_name('landmark_L4:0')
-            landmark_L5 = graph.get_tensor_by_name('landmark_L5:0')
-            landmark_total = [landmark_L1, landmark_L2, landmark_L3, landmark_L4, landmark_L5]
+            # landmark_L1 = graph.get_tensor_by_name('landmark_L1:0')
+            # landmark_L2 = graph.get_tensor_by_name('landmark_L2:0')
+            # landmark_L3 = graph.get_tensor_by_name('landmark_L3:0')
+            # landmark_L4 = graph.get_tensor_by_name('landmark_L4:0')
+            # landmark_L5 = graph.get_tensor_by_name('landmark_L5:0')
+            # landmark_total = [landmark_L1, landmark_L2, landmark_L3, landmark_L4, landmark_L5]
+            landmarks = graph.get_tensor_by_name('pfld_inference/fc/BiasAdd:0')
 
             file_list, train_landmarks, train_attributes, train_euler_angles = gen_data(image_files)
             print(file_list)
@@ -57,7 +58,7 @@ def main():
                     phase_train_placeholder: False
                 }
 
-                pre_landmarks = sess.run(landmark_total, feed_dict=feed_dict)
+                pre_landmarks = sess.run(landmarks, feed_dict=feed_dict)
                 print(pre_landmarks)
                 pre_landmark = pre_landmarks[0]
 

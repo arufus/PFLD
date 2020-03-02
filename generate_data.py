@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 def DateSet(file_list, args, debug=False):
-    file_list, landmarks, attributes,euler_angles = gen_data(file_list)
+    file_list, landmarks, attributes, euler_angles = gen_data(file_list)
     if debug:
         n = args.batch_size * 10
         file_list = file_list[:n]
