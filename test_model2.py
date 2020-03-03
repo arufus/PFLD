@@ -17,8 +17,8 @@ import cv2
 
 
 def main():
-    meta_file = './models2/model0/model.meta'
-    ckpt_file = './models2/model0/model.ckpt-0'
+    meta_file = './models1/model_test/model.meta'
+    ckpt_file = './models1/model_test/model.ckpt-19'
 
     image_size = 112
 

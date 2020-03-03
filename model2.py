@@ -212,9 +212,8 @@ def pfld_inference(input, weight_decay, batch_norm_params):
 
     coefficient = 1
     with tf.variable_scope('pfld_inference'):
-        features = {}
-        with slim.arg_scope([slim.convolution2d, slim.separable_conv2d], \
-                            activation_fn=tf.nn.relu6,\
+        with slim.arg_scope([slim.convolution2d, slim.separable_conv2d],
+                            activation_fn=tf.nn.relu6,
                             weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                             biases_initializer=tf.zeros_initializer(),
                             weights_regularizer=slim.l2_regularizer(weight_decay),
@@ -249,7 +248,7 @@ def pfld_inference(input, weight_decay, batch_norm_params):
             print(conv3_2.name, conv3_2.get_shape())
 
             block3_2 = conv3_1 + conv3_2
-            print(block3_2.name,block3_2.get_shape())
+            print(block3_2.name, block3_2.get_shape())
 
             conv3_3 = slim.convolution2d(block3_2, 128, [1, 1], stride=1, scope='conv3_3/expand')
             print(conv3_3.name, conv3_3.get_shape())
@@ -283,8 +282,6 @@ def pfld_inference(input, weight_decay, batch_norm_params):
 
             block3_5 = block3_4 + conv3_5
             print(block3_5.name,block3_5.get_shape())
-
-            features['auxiliary_input'] = block3_5
 
             #28*28*64
             conv4_1 = slim.convolution2d(block3_5, 128, [1, 1], stride=2,scope='conv4_1/expand')
@@ -388,7 +385,8 @@ def pfld_inference(input, weight_decay, batch_norm_params):
             s3 = slim.flatten(conv8)
             multi_scale = tf.concat([s1,s2,s3],1)
             landmarks = slim.fully_connected(multi_scale,num_outputs=196,activation_fn=None,scope='fc')
-            return features ,landmarks
+            return landmarks
+
 
 def create_model(input, landmark, phase_train, args):
     batch_norm_params = {
@@ -399,8 +397,7 @@ def create_model(input, landmark, phase_train, args):
         'is_training': phase_train
     }
 
-    landmark_dim = int(landmark.get_shape()[-1])
-    features ,landmarks_pre = pfld_inference(input, args.weight_decay, batch_norm_params)
+    landmarks_pre = pfld_inference(input, args.weight_decay, batch_norm_params)
     # loss
     landmarks_loss = tf.reduce_sum(tf.square(landmarks_pre - landmark), axis=1)
     landmarks_loss = tf.reduce_mean(landmarks_loss)
@@ -408,32 +405,14 @@ def create_model(input, landmark, phase_train, args):
     # add the auxiliary net
     # : finish the loss function
     print('\nauxiliary net')
-    with slim.arg_scope([slim.convolution2d, slim.fully_connected], \
-                        activation_fn=tf.nn.relu,\
+    with slim.arg_scope([slim.convolution2d, slim.fully_connected],
+                        activation_fn=tf.nn.relu,
                         weights_initializer=tf.truncated_normal_initializer(stddev=0.01),
                         biases_initializer=tf.zeros_initializer(),
                         weights_regularizer=slim.l2_regularizer(args.weight_decay),
                         normalizer_fn=slim.batch_norm,
                         normalizer_params=batch_norm_params):
-        pfld_input = features['auxiliary_input']
-        net_aux = slim.convolution2d(pfld_input, 128, [3, 3], stride=2, scope='pfld_conv1')
-        print(net_aux.name,net_aux.get_shape())
-        # net = slim.max_pool2d(net, kernel_size=[3, 3], stride=1, scope='pool1', padding='SAME')
-        net_aux = slim.convolution2d(net_aux, 128,[3,3], stride=1 ,scope='pfld_conv2')
-        print(net_aux.name,net_aux.get_shape())
-        net_aux = slim.convolution2d(net_aux,32,[3,3],stride=2,scope='pfld_conv3')
-        print(net_aux.name,net_aux.get_shape())
-        net_aux = slim.convolution2d(net_aux,128,[7,7],stride=1,scope='pfld_conv4')
-        print(net_aux.name,net_aux.get_shape())
-        net_aux = slim.max_pool2d(net_aux, kernel_size=[3, 3], stride=1, scope='pool1', padding='SAME')
-        print(net_aux.name,net_aux.get_shape())
-        net_aux = slim.flatten(net_aux)
-        print(net_aux.name,net_aux.get_shape())
-        fc1 = slim.fully_connected(net_aux,num_outputs=32, activation_fn=None, scope='pfld_fc1')
-        print(fc1.name,fc1.get_shape())
-        euler_angles_pre = slim.fully_connected(fc1,num_outputs=3, activation_fn=None, scope='pfld_fc2')
-        print(euler_angles_pre.name,euler_angles_pre.get_shape())
 
-    # return landmarks_loss, landmarks, heatmap_loss, HeatMaps
-    return landmarks_pre,landmarks_loss, euler_angles_pre
+        # return landmarks_loss, landmarks, heatmap_loss, HeatMaps
+        return landmarks_pre, landmarks_loss
 

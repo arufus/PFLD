@@ -44,11 +44,6 @@ def main(args):
         list_ops['num_test_file'] = num_test_file
 
         model_dir = args.model_dir
-        # if 'test' in model_dir and debug and os.path.exists(model_dir):
-        #     import shutil
-        #     shutil.rmtree(model_dir)
-        # assert not os.path.exists(model_dir)
-        # os.mkdir(model_dir)
 
         print('Total number of examples: {}'.format(num_train_file))
         print('Test number of examples: {}'.format(num_test_file))
@@ -69,36 +64,23 @@ def main(args):
         image_batch = tf.placeholder(tf.float32, shape=(None, args.image_size, args.image_size, 3),
                                      name='image_batch')
         landmark_batch = tf.placeholder(tf.float32, shape=(None, 196), name='landmark_batch')
-        attribute_batch = tf.placeholder(tf.int32,  shape=(None, 6), name='attribute_batch')
-        euler_angles_gt_batch = tf.placeholder(tf.float32,  shape=(None, 3), name='euler_angles_gt_batch')
-        
+
         list_ops['image_batch'] = image_batch
         list_ops['landmark_batch'] = landmark_batch
-        list_ops['attribute_batch'] = attribute_batch
-        list_ops['euler_angles_gt_batch'] = euler_angles_gt_batch
 
         phase_train_placeholder = tf.placeholder(tf.bool, name='phase_train')
         list_ops['phase_train_placeholder'] = phase_train_placeholder
 
         print('Building training graph.')
-        # total_loss, landmarks, heatmaps_loss, heatmaps= create_model(image_batch, landmark_batch,\
-        #                                                                                phase_train_placeholder, args)
-        landmarks_pre, landmarks_loss, euler_angles_pre = create_model(image_batch, landmark_batch,
-                                                                              phase_train_placeholder, args)
+
+        landmarks_pre, landmarks_loss = create_model(image_batch, landmark_batch,
+                                                     phase_train_placeholder, args)
         get_param_num()
 
-        attributes_w_n = tf.to_float(attribute_batch[:, 1:6])
-        # _num = attributes_w_n.shape[0]
-        mat_ratio = tf.reduce_mean(attributes_w_n,axis=0)  
-        mat_ratio = tf.map_fn(lambda x:(tf.cond(x > 0,lambda: 1/x,lambda:float(args.batch_size))),mat_ratio)      
-        attributes_w_n = tf.convert_to_tensor(attributes_w_n * mat_ratio)
-        attributes_w_n = tf.reduce_sum(attributes_w_n,axis=1)
-        list_ops['attributes_w_n_batch']=attributes_w_n                                                                                
-                                                                              
         L2_loss = tf.add_n(tf.losses.get_regularization_losses())
-        _sum_k = tf.reduce_sum(tf.map_fn(lambda x: 1 - tf.cos(abs(x)), euler_angles_gt_batch - euler_angles_pre), axis=1)
+
         loss_sum = tf.reduce_sum(tf.square(landmark_batch - landmarks_pre), axis=1)
-        loss_sum = tf.reduce_mean(loss_sum*_sum_k*attributes_w_n)
+        loss_sum = tf.reduce_mean(loss_sum)
         loss_sum += L2_loss
         
         train_op, lr_op = train_model(loss_sum, global_step, num_train_file, args)
@@ -178,11 +160,11 @@ def main(args):
 
 def train(sess, epoch_size, epoch, list_ops):
 
-    image_batch, landmarks_batch, attribute_batch, euler_batch = list_ops['train_next_element']
+    image_batch, landmarks_batch = list_ops['train_next_element']
 
     for i in range(epoch_size):
         #TODO : get the w_n and euler_angles_gt_batch
-        images, landmarks, attributes, eulers = sess.run([image_batch, landmarks_batch, attribute_batch, euler_batch])
+        images, landmarks = sess.run([image_batch, landmarks_batch])
 
         '''
         calculate the w_n: return the batch [-1,1]
@@ -193,20 +175,14 @@ def train(sess, epoch_size, epoch, list_ops):
         #204: 遮挡(occlusion)    0->无遮挡(no occlusion)           1->遮挡(occlusion)
         #205: 模糊(blur)         0->清晰(clear)                    1->模糊(blur)
         '''
-       
-        attributes_w_n = sess.run(list_ops['attributes_w_n_batch'],feed_dict={list_ops['image_batch']: images,
-                                                                              list_ops['attribute_batch']: attributes})
 
         feed_dict = {
             list_ops['image_batch']: images,
             list_ops['landmark_batch']: landmarks,
-            list_ops['attribute_batch']: attributes,
             list_ops['phase_train_placeholder']: True,
-            list_ops['euler_angles_gt_batch'] : eulers,
-            list_ops['attributes_w_n_batch']: attributes_w_n
         }
-        loss, _, lr, L2_loss = sess.run([list_ops['loss'], list_ops['train_op'], list_ops['lr_op'],\
-                        list_ops['L2_loss']], feed_dict=feed_dict)
+        loss, _, lr, L2_loss = sess.run([list_ops['loss'], list_ops['train_op'], list_ops['lr_op'],
+                                        list_ops['L2_loss']], feed_dict=feed_dict)
 
         if ((i + 1) % 10) == 0 or (i+1) == epoch_size:
             Epoch = 'Epoch:[{:<4}][{:<4}/{:<4}]'.format(epoch, i+1, epoch_size)
@@ -216,7 +192,7 @@ def train(sess, epoch_size, epoch, list_ops):
     return loss, L2_loss
 
 def test(sess, list_ops, args):
-    image_batch, landmarks_batch, attribute_batch, euler_batch = list_ops['test_next_element']
+    image_batch, landmarks_batch = list_ops['test_next_element']
 
     sample_path = os.path.join(args.model_dir, 'HeatMaps')
     if not os.path.exists(sample_path):
@@ -228,11 +204,10 @@ def test(sess, list_ops, args):
 
     epoch_size = math.ceil(list_ops['num_test_file'] * 1.0 / args.batch_size)
     for i in range(epoch_size): #batch_num
-        images, landmarks, attributes, eulers = sess.run([image_batch, landmarks_batch, attribute_batch, euler_batch])
+        images, landmarks = sess.run([image_batch, landmarks_batch])
         feed_dict = {
             list_ops['image_batch']: images,
             list_ops['landmark_batch']: landmarks,
-            list_ops['attribute_batch']: attributes,
             list_ops['phase_train_placeholder']: False
         }
         pre_landmarks = sess.run(list_ops['landmarks'], feed_dict=feed_dict)
@@ -300,10 +275,10 @@ def save_image_example(sess, list_ops, args):
     save_path = os.path.join(args.model_dir, 'image_example')
     if not os.path.exists(save_path):
         os.mkdir(save_path)
-    image_batch, landmarks_batch, attribute_batch = list_ops['train_next_element']
+    image_batch, landmarks_batch = list_ops['train_next_element']
 
     for b in range(save_nbatch):
-        images, landmarks, attributes = sess.run([image_batch, landmarks_batch, attribute_batch])
+        images, landmarks = sess.run([image_batch, landmarks_batch])
         for i in range(images.shape[0]):
             img = images[i] * 256
             img = img.astype(np.uint8)
@@ -324,19 +299,22 @@ def parse_arguments(argv):
     parser.add_argument('--file_list', type=str,default=r'F:\Data\WFLW\PFLD_out\train_data\list.txt')
     parser.add_argument('--test_list', type=str, default=r'F:\Data\WFLW\PFLD_out\test_data\list.txt')
     parser.add_argument('--seed', type=int, default=666)
-    parser.add_argument('--max_epoch', type=int, default=10)
+    parser.add_argument('--max_epoch', type=int, default=20)
     parser.add_argument('--image_size', type=int, default=112)
     parser.add_argument('--image_channels', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--pretrained_model', type=str, default=None)
-    parser.add_argument('--model_dir', type=str, default='models1/model_test')
+    # parser.add_argument('--pretrained_model', type=str, default=r'D:\PROJECT\PFLD\models1\model_test')
+    parser.add_argument('--model_dir', type=str, default='models1/model_test2')
     parser.add_argument('--learning_rate', type=float, default=0.001)
     parser.add_argument('--lr_epoch', type=str, default='10,20,30,40,200,500')
+    # parser.add_argument('--lr_epoch', type=str, default='2,5,10,20,20,20')
     parser.add_argument('--weight_decay', type=float, default=5e-5)
     parser.add_argument('--level', type=str, default='L5')
     parser.add_argument('--save_image_example',action='store_false', default=False)
     parser.add_argument('--debug', type=str, default='False')
     return parser.parse_args(argv)
+
 
 if __name__ == '__main__':
     print(sys.argv)

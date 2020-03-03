@@ -14,7 +14,6 @@ from generate_data import gen_data
 def main():
     meta_file = './models2/model0/model.meta'
     ckpt_file = './models2/model0/model.ckpt-0'
-    # test_list = './data/300w_image_list.txt'
 
     image_size = 112
 
@@ -33,12 +32,6 @@ def main():
             images_placeholder = graph.get_tensor_by_name('image_batch:0')
             phase_train_placeholder = graph.get_tensor_by_name('phase_train:0')
 
-            # landmark_L1 = graph.get_tensor_by_name('landmark_L1:0')
-            # landmark_L2 = graph.get_tensor_by_name('landmark_L2:0')
-            # landmark_L3 = graph.get_tensor_by_name('landmark_L3:0')
-            # landmark_L4 = graph.get_tensor_by_name('landmark_L4:0')
-            # landmark_L5 = graph.get_tensor_by_name('landmark_L5:0')
-            # landmark_total = [landmark_L1, landmark_L2, landmark_L3, landmark_L4, landmark_L5]
             landmarks = graph.get_tensor_by_name('pfld_inference/fc/BiasAdd:0')
 
             file_list, train_landmarks, train_attributes, train_euler_angles = gen_data(image_files)
